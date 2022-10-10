@@ -1,27 +1,25 @@
-name: Deploy
+name: Deployment CI/CD configuration
 
-# Trigger the workflow on push and 
-# pull request events on the production branch
 on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - staging
-      
-# Authenticate to the the server via ssh 
-# and run our deployment script 
+
 jobs:
-  deploy:
+  build-deploy-dev:
+    if: "github.ref == 'refs/heads/main'"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - name: Deploy to server
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.HOST }}
-          username: ${{ secrets.USERNAME }}
-          port: ${{ secrets.PORT }}
-          key: ${{ secrets.SSHKEY }}
-          script: "cd /var/www/html && ./.scripts/deploy.sh"
+      - uses: actions/checkout@v1
+      - name: Login to Heroku Container registry
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+        run: heroku container:login
+      - name: Build and push
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+        run: heroku container:push -a ${{ secrets.HEROKU_APP_NAME }} web
+      - name: Release
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+        run: heroku container:release -a ${{ secrets.HEROKU_APP_NAME }} web
